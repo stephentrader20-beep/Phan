@@ -192,11 +192,64 @@
     }
     .balance-sub {
       display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 8px;
+      width: 100%;
+    }
+    .balance-pnl-row {
+      display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 15px;
+      font-size: 16px;
       font-weight: 600;
-      margin-top: 6px;
+      line-height: 1.2;
+      white-space: nowrap;
+    }
+    .balance-pct-pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+    .balance-pct-pill.up {
+      background: rgba(48, 209, 88, 0.15);
+      color: var(--green);
+    }
+    .balance-pct-pill.down {
+      background: rgba(255, 69, 58, 0.15);
+      color: var(--red);
+    }
+    .balance-alloc-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+    }
+    .alloc-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 9px;
+      border-radius: 8px;
+      background: var(--surface);
+      color: #D1D1D6;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.1;
+      white-space: nowrap;
+    }
+    .alloc-chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
     }
     .text-green { color: var(--green); }
     .text-red { color: var(--red); }
@@ -1240,9 +1293,11 @@
   <main id="screen-inicio" class="screen active">
     <div class="balance-amount" id="home-total-balance">$63,978.97</div>
     <div class="balance-sub">
-      <span class="text-green" id="home-total-pnl">+$2,418.50</span>
-      <span class="text-green" id="home-total-pct">+3.93%</span>
-      <span class="text-muted" id="home-allocation-label">· 50% SOL · 50% BTC</span>
+      <div class="balance-pnl-row">
+        <span class="text-green" id="home-total-pnl">+$2,418.50</span>
+        <span class="balance-pct-pill up" id="home-total-pct">+3.93%</span>
+      </div>
+      <div class="balance-alloc-row" id="home-allocation-label"></div>
     </div>
 
     <div class="action-grid">
@@ -3432,6 +3487,9 @@
       document.getElementById(id).classList.add('open');
     }
     function closeModal(id) {
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
       document.getElementById(id).classList.remove('open');
     }
 
@@ -3666,14 +3724,21 @@
       LIVE_PORTFOLIO.totalUsdStr = totalStr;
 
       // Dynamic allocation summary (e.g. "· 100% BTC" or "· 50% SOL · 50% BTC")
-      const allocParts = [];
+      const dotColors = {
+        SOL: '#14F195',
+        BTC: '#F7931A',
+        USDC: '#2775CA',
+        USDT: '#26A17B'
+      };
+      const allocChips = [];
       CORE_ORDER.forEach(sym => {
         if (assetUsd[sym] > 0.5 && totalUsd > 0) {
           const share = Math.round((assetUsd[sym] / totalUsd) * 100);
-          if (share > 0) allocParts.push(`${share}% ${sym}`);
+          if (share > 0) {
+            allocChips.push(`<span class="alloc-chip"><span class="alloc-chip-dot" style="background:${dotColors[sym] || '#AB9FF2'};"></span>${share}% ${sym}</span>`);
+          }
         }
       });
-      const allocText = allocParts.length ? '· ' + allocParts.join(' · ') : `· ${wallet.name}`;
 
       // 1. Inicio Header
       const elHomeBal = document.getElementById('home-total-balance');
@@ -3688,11 +3753,15 @@
       const elHomePct = document.getElementById('home-total-pct');
       if (elHomePct) {
         elHomePct.textContent = fmtSignedPct(totalPct);
-        elHomePct.className = totalPct >= 0 ? 'text-green' : 'text-red';
+        elHomePct.className = 'balance-pct-pill ' + (totalPct >= 0 ? 'up' : 'down');
       }
 
       const elAlloc = document.getElementById('home-allocation-label');
-      if (elAlloc) elAlloc.textContent = allocText;
+      if (elAlloc) {
+        elAlloc.innerHTML = allocChips.length
+          ? allocChips.join('')
+          : `<span class="alloc-chip">${wallet.name}</span>`;
+      }
 
       // 2. Inicio Dynamic Asset Cards (SOL, BTC + USDC/USDT/MIHAO when > 0)
       const displaySyms = ['SOL', 'BTC'];
@@ -4535,7 +4604,7 @@
           window.location.reload();
         }
       });
-      navigator.serviceWorker.register('./sw.js?v=19').then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=20').then((reg) => {
         reg.update().catch(() => {});
       }).catch(() => {});
     }
