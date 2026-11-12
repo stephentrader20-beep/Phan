@@ -1,4 +1,4 @@
-const CACHE_NAME = 'phantom-onocha-v13';
+const CACHE_NAME = 'phantom-onocha-v14';
 const ASSETS = [
   './',
   './index.html',
