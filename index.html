@@ -69,37 +69,34 @@
       flex-shrink: 0;
     }
 
-    /* === iOS PULL-TO-REFRESH SPINNER === */
+    /* === iOS PULL-TO-REFRESH SPINNER (NATIVE UIRefreshControl STYLE) === */
     #ptr-indicator {
       position: fixed;
-      top: calc(max(12px, env(safe-area-inset-top)) + 48px);
+      top: calc(max(12px, env(safe-area-inset-top)) + 68px);
       left: 50%;
-      width: 36px;
-      height: 36px;
-      margin-left: -18px;
-      border-radius: 50%;
-      background: rgba(34, 34, 38, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+      width: 26px;
+      height: 26px;
+      margin-left: -13px;
+      background: transparent;
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 75;
+      z-index: 15;
       pointer-events: none;
       opacity: 0;
-      transform: translateY(-20px) scale(0.75);
-      transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+      transform: scale(0.88);
+      transition: opacity 0.2s ease, transform 0.2s ease;
     }
     #ptr-indicator.pulling {
       transition: none;
     }
     #ptr-indicator.refreshing {
       opacity: 1 !important;
-      transform: translateY(14px) scale(1) !important;
+      transform: scale(1) !important;
     }
     .ios-spinner {
-      width: 22px;
-      height: 22px;
+      width: 26px;
+      height: 26px;
       display: block;
     }
     #ptr-indicator.refreshing .ios-spinner {
@@ -110,6 +107,9 @@
       100% { transform: rotate(360deg); }
     }
     #ptr-content-wrap {
+      position: relative;
+      z-index: 10;
+      background-color: var(--bg);
       will-change: transform;
     }
 
@@ -117,8 +117,8 @@
     .top-bar {
       position: sticky;
       top: 0;
-      z-index: 20;
-      background: rgba(15, 15, 15, 0.94);
+      z-index: 30;
+      background: #0F0F0F;
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       display: flex;
@@ -885,20 +885,20 @@
 
   <!-- iOS PULL-TO-REFRESH SPINNER -->
   <div id="ptr-indicator" aria-hidden="true">
-    <svg class="ios-spinner" id="ptr-spinner-svg" viewBox="0 0 24 24">
-      <g stroke="#E5E5EA" stroke-width="2.1" stroke-linecap="round">
-        <line x1="12" y1="2.5" x2="12" y2="6.2" opacity="1.0" />
-        <line x1="16.75" y1="3.77" x2="14.9" y2="6.98" opacity="0.92" />
-        <line x1="20.23" y1="7.25" x2="17.02" y2="9.1" opacity="0.84" />
-        <line x1="21.5" y1="12" x2="17.8" y2="12" opacity="0.76" />
-        <line x1="20.23" y1="16.75" x2="17.02" y2="14.9" opacity="0.68" />
-        <line x1="16.75" y1="20.23" x2="14.9" y2="17.02" opacity="0.60" />
-        <line x1="12" y1="21.5" x2="12" y2="17.8" opacity="0.52" />
-        <line x1="7.25" y1="20.23" x2="9.1" y2="17.02" opacity="0.44" />
-        <line x1="3.77" y1="16.75" x2="6.98" y2="14.9" opacity="0.36" />
-        <line x1="2.5" y1="12" x2="6.2" y2="12" opacity="0.28" />
-        <line x1="3.77" y1="7.25" x2="6.98" y2="9.1" opacity="0.22" />
-        <line x1="7.25" y1="3.77" x2="9.1" y2="6.98" opacity="0.16" />
+    <svg class="ios-spinner" id="ptr-spinner-svg" viewBox="0 0 28 28">
+      <g stroke="#FFFFFF" stroke-width="2.35" stroke-linecap="round">
+        <line class="ptr-spoke" x1="14" y1="2.5" x2="14" y2="7.2" opacity="1.0" />
+        <line class="ptr-spoke" x1="19.75" y1="4.04" x2="17.4" y2="8.11" opacity="0.92" />
+        <line class="ptr-spoke" x1="23.96" y1="8.25" x2="19.89" y2="10.6" opacity="0.84" />
+        <line class="ptr-spoke" x1="25.5" y1="14" x2="20.8" y2="14" opacity="0.76" />
+        <line class="ptr-spoke" x1="23.96" y1="19.75" x2="19.89" y2="17.4" opacity="0.68" />
+        <line class="ptr-spoke" x1="19.75" y1="23.96" x2="17.4" y2="19.89" opacity="0.60" />
+        <line class="ptr-spoke" x1="14" y1="25.5" x2="14" y2="20.8" opacity="0.52" />
+        <line class="ptr-spoke" x1="8.25" y1="23.96" x2="10.6" y2="19.89" opacity="0.44" />
+        <line class="ptr-spoke" x1="4.04" y1="19.75" x2="8.11" y2="17.4" opacity="0.36" />
+        <line class="ptr-spoke" x1="2.5" y1="14" x2="7.2" y2="14" opacity="0.28" />
+        <line class="ptr-spoke" x1="4.04" y1="8.25" x2="8.11" y2="10.6" opacity="0.22" />
+        <line class="ptr-spoke" x1="8.25" y1="4.04" x2="10.6" y2="8.11" opacity="0.16" />
       </g>
     </svg>
   </div>
@@ -1958,7 +1958,7 @@
     }
 
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js?v=8').catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=9').catch(() => {});
     }
 
     // === SPLASH (1s) + iOS FACE ID BIOMETRIC CONTROLLER ===
@@ -2089,20 +2089,23 @@
       }, 950);
     });
 
-    // === iOS PULL-TO-REFRESH CONTROLLER ===
+    // === iOS PULL-TO-REFRESH CONTROLLER (EXACT PHANTOM iOS BEHAVIOR) ===
     (function initPullToRefresh() {
       const indicator = document.getElementById('ptr-indicator');
       const spinnerSvg = document.getElementById('ptr-spinner-svg');
       const contentWrap = document.getElementById('ptr-content-wrap');
+      const spokes = spinnerSvg ? Array.from(spinnerSvg.querySelectorAll('.ptr-spoke')) : [];
+      const baseOpacities = [1.0, 0.92, 0.84, 0.76, 0.68, 0.60, 0.52, 0.44, 0.36, 0.28, 0.22, 0.16];
       if (!indicator || !spinnerSvg || !contentWrap) return;
 
       let startY = 0;
-      let currentPull = 0;
+      let currentGap = 0;
       let isPulling = false;
       let isRefreshing = false;
-      let activeScrollTarget = null;
-      const THRESHOLD = 68;
-      const MAX_PULL = 115;
+      let activeModal = null;
+      const TRIGGER_GAP = 56;
+      const HOLD_GAP = 64;
+      const MAX_GAP = 104;
 
       function getOpenModal() {
         const modals = document.querySelectorAll('.sub-modal.open');
@@ -2111,9 +2114,9 @@
 
       function isAtTop(modalEl) {
         if (modalEl) {
-          return modalEl.scrollTop <= 0;
+          return modalEl.scrollTop <= 1;
         }
-        return (window.scrollY || document.documentElement.scrollTop || 0) <= 0;
+        return (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0) <= 1;
       }
 
       function canStartPull() {
@@ -2124,99 +2127,121 @@
         const openModal = getOpenModal();
         if (openModal && openModal.id !== 'modal-profile') return false;
         if (!isAtTop(openModal)) return false;
-        activeScrollTarget = openModal;
+        activeModal = openModal;
         return true;
       }
 
-      function updateVisuals(dist) {
-        const progress = Math.min(dist / THRESHOLD, 1);
-        const yOffset = -16 + Math.min(dist * 0.45, 34);
-        const scale = 0.75 + 0.25 * progress;
-        indicator.style.opacity = String(Math.min(progress * 1.15, 1));
-        indicator.style.transform = `translateY(${yOffset}px) scale(${scale})`;
-        spinnerSvg.style.transform = `rotate(${dist * 3.2}deg)`;
+      function setSpokeProgress(progress) {
+        const visibleCount = Math.max(1, Math.round(progress * spokes.length));
+        spokes.forEach((spoke, idx) => {
+          spoke.setAttribute('opacity', idx < visibleCount ? String(baseOpacities[idx]) : '0');
+        });
+      }
 
-        const targetEl = activeScrollTarget ? activeScrollTarget.querySelector('.profile-body') : contentWrap;
+      function restoreAllSpokes() {
+        spokes.forEach((spoke, idx) => {
+          spoke.setAttribute('opacity', String(baseOpacities[idx]));
+        });
+      }
+
+      function getTargetElement() {
+        return activeModal ? activeModal.querySelector('.profile-body') : contentWrap;
+      }
+
+      function updatePullVisuals(gap) {
+        const progress = Math.min(gap / TRIGGER_GAP, 1);
+        indicator.style.top = activeModal
+          ? 'calc(max(12px, env(safe-area-inset-top)) + 64px)'
+          : 'calc(max(12px, env(safe-area-inset-top)) + 68px)';
+        indicator.style.zIndex = activeModal ? '65' : '15';
+        indicator.style.opacity = String(Math.min(progress * 1.1, 1));
+        indicator.style.transform = `scale(${0.86 + 0.14 * progress})`;
+        spinnerSvg.style.transform = `rotate(${progress * 60}deg)`;
+        setSpokeProgress(progress);
+
+        const targetEl = getTargetElement();
         if (targetEl) {
           targetEl.style.transition = 'none';
-          targetEl.style.transform = `translateY(${dist * 0.38}px)`;
+          targetEl.style.transform = `translateY(${gap}px)`;
         }
       }
 
-      function resetVisuals() {
+      function resetPullVisuals() {
         indicator.classList.remove('pulling', 'refreshing');
         indicator.style.opacity = '0';
-        indicator.style.transform = 'translateY(-20px) scale(0.75)';
+        indicator.style.transform = 'scale(0.88)';
         spinnerSvg.style.transform = '';
+        restoreAllSpokes();
 
-        const targetEl = activeScrollTarget ? activeScrollTarget.querySelector('.profile-body') : contentWrap;
+        const targetEl = getTargetElement();
         if (targetEl) {
-          targetEl.style.transition = 'transform 0.26s cubic-bezier(0.22, 1, 0.36, 1)';
+          targetEl.style.transition = 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1)';
           targetEl.style.transform = 'translateY(0px)';
         }
-        currentPull = 0;
+        currentGap = 0;
         isPulling = false;
-        activeScrollTarget = null;
+        activeModal = null;
       }
 
-      function triggerRefresh() {
+      function startRefreshingState() {
         isRefreshing = true;
         isPulling = false;
+        restoreAllSpokes();
         indicator.classList.remove('pulling');
         indicator.classList.add('refreshing');
         spinnerSvg.style.transform = '';
 
-        const targetEl = activeScrollTarget ? activeScrollTarget.querySelector('.profile-body') : contentWrap;
+        const targetEl = getTargetElement();
         if (targetEl) {
-          targetEl.style.transition = 'transform 0.22s cubic-bezier(0.22, 1, 0.36, 1)';
-          targetEl.style.transform = 'translateY(26px)';
+          targetEl.style.transition = 'transform 0.24s cubic-bezier(0.22, 1, 0.36, 1)';
+          targetEl.style.transform = `translateY(${HOLD_GAP}px)`;
         }
 
         setTimeout(() => {
           isRefreshing = false;
-          resetVisuals();
-        }, 900);
+          resetPullVisuals();
+        }, 1650);
       }
 
       document.addEventListener('touchstart', (e) => {
         if (e.touches.length !== 1) return;
         if (!canStartPull()) return;
         startY = e.touches[0].clientY;
-        currentPull = 0;
+        currentGap = 0;
         isPulling = true;
         indicator.classList.add('pulling');
       }, { passive: true });
 
       document.addEventListener('touchmove', (e) => {
         if (!isPulling || isRefreshing) return;
-        if (!isAtTop(activeScrollTarget)) {
-          resetVisuals();
+        if (!isAtTop(activeModal)) {
+          resetPullVisuals();
           return;
         }
         const dy = e.touches[0].clientY - startY;
-        if (dy > 4) {
+        if (dy > 3) {
           if (e.cancelable) e.preventDefault();
-          currentPull = Math.min(MAX_PULL, dy * 0.52);
-          updateVisuals(currentPull);
-        } else if (dy < -2) {
-          resetVisuals();
+          // Smooth rubber-band pull opening the black space beneath the top bar
+          currentGap = Math.min(MAX_GAP, Math.pow(dy, 0.88) * 1.15);
+          updatePullVisuals(currentGap);
+        } else if (dy < -3) {
+          resetPullVisuals();
         }
       }, { passive: false });
 
       document.addEventListener('touchend', () => {
         if (!isPulling) return;
-        if (currentPull >= THRESHOLD) {
-          triggerRefresh();
+        if (currentGap >= TRIGGER_GAP) {
+          startRefreshingState();
         } else {
-          resetVisuals();
+          resetPullVisuals();
         }
       }, { passive: true });
 
       document.addEventListener('touchcancel', () => {
-        if (isPulling) resetVisuals();
+        if (isPulling) resetPullVisuals();
       }, { passive: true });
     })();
-
   </script>
 </body>
 </html>
