@@ -1,4 +1,4 @@
-const CACHE_NAME = 'phantom-onocha-v11';
+const CACHE_NAME = 'phantom-onocha-v12';
 const ASSETS = [
   './',
   './index.html',
@@ -23,7 +23,7 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-store' })
       .then((networkRes) => {
         const clone = networkRes.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
