@@ -3,8 +3,8 @@
   "short_name": "Phantom",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#A8A0EB",
-  "theme_color": "#A8A0EB",
+  "background_color": "#A39DE7",
+  "theme_color": "#A39DE7",
   "orientation": "portrait",
   "icons": [
     {
