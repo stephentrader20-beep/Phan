@@ -4280,6 +4280,29 @@
             bc.postMessage(txObj);
             bc.close();
           }
+
+          // Cloud Bridge Sync via JSONBin.io (Public Bin) for iOS PWA isolation bypass
+          (async () => {
+            const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/6af745eaffd5d16053bf35c9';
+            try {
+              let cloudQueue = [];
+              const getRes = await fetch(JSONBIN_URL + '/latest', { cache: 'no-store' });
+              if (getRes.ok) {
+                const getData = await getRes.json();
+                const rec = getData && getData.record;
+                if (rec && Array.isArray(rec.transfers)) {
+                  cloudQueue = rec.transfers;
+                }
+              }
+              cloudQueue.push(txObj);
+              if (cloudQueue.length > 50) cloudQueue = cloudQueue.slice(-50);
+              await fetch(JSONBIN_URL, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transfers: cloudQueue, updatedAt: Date.now() })
+              });
+            } catch (_) {}
+          })();
         } catch (_) {}
 
       } else if (PORTFOLIO_STATE.wallets[sendState.destId]) {
