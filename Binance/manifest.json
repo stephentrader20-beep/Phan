@@ -3,7 +3,7 @@
   "short_name": "Binance",
   "description": "Binance Exchange & Crypto Wallet",
   "start_url": "./",
-  "scope": "./",
+  "scope": "/Phan/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#181E25",
