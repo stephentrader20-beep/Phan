@@ -2660,6 +2660,16 @@
             <button class="secondary-pill-btn" onclick="setSendPresetPercent(0.5)">50%</button>
             <button class="secondary-pill-btn" onclick="setSendPresetPercent(1)">Máx</button>
           </div>
+          <div id="send-fee-box" style="margin-top:14px; padding-top:12px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:6px; font-size:12px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="text-muted" id="send-network-label">Tarifa de red (Solana)</span>
+              <span id="send-fee-text" style="font-weight:600; color:var(--text);">0.000005 SOL (<$0.01)</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span class="text-muted">Recibirás en destino</span>
+              <span id="send-net-receive-text" style="font-weight:700; color:var(--green);">0.0000 SOL</span>
+            </div>
+          </div>
         </div>
         <div class="keypad-grid">
           <button class="key-btn" onclick="pressSendKey('1')">1</button>
@@ -4172,6 +4182,7 @@
     function selectSendDest(destId) {
       sendState.destId = destId;
       renderSendDestOptions();
+      updateSendDisplay();
     }
 
     function renderSendDestOptions() {
@@ -4219,20 +4230,91 @@
       updateSendDisplay();
     }
 
+    function computeSendNetworkFee(sym, w, grossQty) {
+      const solPrice = TOKENS.SOL?.price || 80.0;
+      const btcPrice = TOKENS.BTC?.price || 68600.0;
+      const tokPrice = TOKENS[sym]?.price || 1;
+      const availSol = Number((w && w.holdings && w.holdings.SOL) || 0);
+
+      // Bitcoin network fee (~7.5 sat/vB * ~140 vB = ~0.0000105 BTC ≈ $0.72)
+      if (sym === 'BTC') {
+        const feeBtc = 0.0000105;
+        const feeUsd = feeBtc * btcPrice;
+        return {
+          networkName: 'Bitcoin',
+          feeSym: 'BTC',
+          feeNativeQty: feeBtc,
+          feeUsd,
+          feeText: `${feeBtc.toFixed(7)} BTC (${fmtUsd(feeUsd)})`,
+          gasless: false
+        };
+      }
+
+      // Solana network: 5,000 lamports base fee + priority fee = 0.000015 SOL (~$0.0012)
+      // If user has SOL, paid in SOL; otherwise Phantom Gasless Send deducts a flat ~$0.05 fee from the token itself
+      const solFeeQty = 0.000015;
+      const solFeeUsd = solFeeQty * solPrice;
+      if (availSol >= solFeeQty) {
+        return {
+          networkName: 'Solana',
+          feeSym: 'SOL',
+          feeNativeQty: solFeeQty,
+          feeUsd: solFeeUsd,
+          feeText: `${solFeeQty.toFixed(6)} SOL (<$0.01)`,
+          gasless: false
+        };
+      } else {
+        const flatFeeUsd = 0.05;
+        const feeTokQty = tokPrice > 0 ? (flatFeeUsd / tokPrice) : 0;
+        return {
+          networkName: 'Solana · Gasless',
+          feeSym: sym,
+          feeNativeQty: feeTokQty,
+          feeUsd: flatFeeUsd,
+          feeText: `${fmtQty(sym, feeTokQty)} ${sym} ($0.05)`,
+          gasless: true
+        };
+      }
+    }
+
     function setSendPresetPercent(frac) {
       const w = getActiveWallet();
-      const qty = Number(w.holdings[sendState.sym] || 0);
-      const usd = qty * TOKENS[sendState.sym].price * frac;
+      const sym = sendState.sym;
+      const qty = Number(w.holdings[sym] || 0);
+      const price = TOKENS[sym].price;
+      let maxSendableQty = qty;
+      if (frac >= 0.999) {
+        const feeInfo = computeSendNetworkFee(sym, w, qty);
+        if (feeInfo.feeSym === sym) {
+          maxSendableQty = Math.max(0, qty - feeInfo.feeNativeQty);
+        }
+      }
+      const usd = maxSendableQty * price * frac;
       sendState.raw = usd > 0 ? usd.toFixed(2) : '0';
       updateSendDisplay();
     }
 
     function updateSendDisplay() {
       const num = parseFloat(sendState.raw) || 0;
-      const price = TOKENS[sendState.sym]?.price || 1;
+      const sym = sendState.sym;
+      const price = TOKENS[sym]?.price || 1;
+      const w = getActiveWallet();
       document.getElementById('send-amount-display').textContent = '$' + sendState.raw;
       const cryptoQty = price > 0 ? (num / price) : 0;
-      document.getElementById('send-crypto-eq').textContent = `${fmtQty(sendState.sym, cryptoQty)} ${sendState.sym}`;
+      document.getElementById('send-crypto-eq').textContent = `${fmtQty(sym, cryptoQty)} ${sym}`;
+
+      const feeInfo = computeSendNetworkFee(sym, w, cryptoQty);
+      const netLbl = document.getElementById('send-network-label');
+      const feeTxt = document.getElementById('send-fee-text');
+      const recTxt = document.getElementById('send-net-receive-text');
+      if (netLbl) netLbl.textContent = `Tarifa de red (${feeInfo.networkName})`;
+      if (feeTxt) feeTxt.textContent = feeInfo.feeText;
+      if (recTxt) {
+        const netReceiveQty = Math.max(0, cryptoQty);
+        recTxt.textContent = num > 0
+          ? `${fmtQty(sym, netReceiveQty)} ${sym} (${fmtUsd(netReceiveQty * price)})`
+          : `0.0000 ${sym}`;
+      }
     }
 
     function confirmSendTx() {
@@ -4252,11 +4334,31 @@
         return;
       }
 
-      const sendQty = usdAmt >= maxUsd - 0.02 ? availQty : (usdAmt / price);
-      const fracMoved = availQty > 0 ? Math.min(1, sendQty / availQty) : 0;
-      const movedCost = Number((w.costBasis && w.costBasis[sym]) || 0) * fracMoved;
-      if (w.costBasis) w.costBasis[sym] = Math.max(0, Number(w.costBasis[sym] || 0) - movedCost);
-      w.holdings[sym] = Math.max(0, availQty - sendQty);
+      let sendQty = usdAmt >= maxUsd - 0.02 ? availQty : (usdAmt / price);
+      const feeInfo = computeSendNetworkFee(sym, w, sendQty);
+
+      // Deduct network fee realistically (from native gas token SOL, or from BTC/token itself if gasless/BTC)
+      if (feeInfo.feeSym === sym) {
+        if (sendQty + feeInfo.feeNativeQty > availQty) {
+          sendQty = Math.max(0, availQty - feeInfo.feeNativeQty);
+        }
+        if (sendQty <= 0) {
+          showToast(`Saldo insuficiente para cubrir tarifa de red (${feeInfo.feeText})`);
+          return;
+        }
+        const totalDeducted = Math.min(availQty, sendQty + feeInfo.feeNativeQty);
+        const fracMoved = availQty > 0 ? Math.min(1, totalDeducted / availQty) : 0;
+        const movedCost = Number((w.costBasis && w.costBasis[sym]) || 0) * fracMoved;
+        if (w.costBasis) w.costBasis[sym] = Math.max(0, Number(w.costBasis[sym] || 0) - movedCost);
+        w.holdings[sym] = Math.max(0, availQty - totalDeducted);
+      } else {
+        // Gas paid in SOL (0.000015 SOL)
+        const fracMoved = availQty > 0 ? Math.min(1, sendQty / availQty) : 0;
+        const movedCost = Number((w.costBasis && w.costBasis[sym]) || 0) * fracMoved;
+        if (w.costBasis) w.costBasis[sym] = Math.max(0, Number(w.costBasis[sym] || 0) - movedCost);
+        w.holdings[sym] = Math.max(0, availQty - sendQty);
+        w.holdings.SOL = Math.max(0, Number(w.holdings.SOL || 0) - feeInfo.feeNativeQty);
+      }
 
       let destLabel = 'Billetera externa';
       if (sendState.destId === 'binance') {
@@ -4269,6 +4371,7 @@
             sym,
             qty: Number(sendQty.toFixed(6)),
             usd: Number((sendQty * price).toFixed(2)),
+            feeUsd: Number(feeInfo.feeUsd.toFixed(4)),
             from: '@ONOCHA'
           };
           bridgeQueue.push(txObj);
@@ -4309,14 +4412,13 @@
         const targetW = PORTFOLIO_STATE.wallets[sendState.destId];
         targetW.holdings[sym] = Number(targetW.holdings[sym] || 0) + sendQty;
         if (!targetW.costBasis) targetW.costBasis = { SOL: 0, BTC: 0, USDC: 0, USDT: 0, MIHAO: 0 };
-        targetW.costBasis[sym] = Number(targetW.costBasis[sym] || 0) + movedCost;
         destLabel = targetW.name;
       }
 
       PORTFOLIO_STATE.history.unshift({
         sym,
         title: `Transferido ${sym}`,
-        sub: `${w.name} → ${destLabel}`,
+        sub: `${w.name} → ${destLabel} · Red: ${feeInfo.feeText}`,
         rightTop: `-${fmtQty(sym, sendQty)} ${sym}`,
         rightSub: fmtUsd(sendQty * price),
         positive: false
@@ -4326,7 +4428,7 @@
       applyLivePortfolioUI();
       backToSendList();
       closeModal('modal-enviar');
-      showToast(`Transferido ${fmtQty(sym, sendQty)} ${sym} a ${destLabel} ✓`);
+      showToast(`Enviado ${fmtQty(sym, sendQty)} ${sym} · Tarifa ${feeInfo.feeText} ✓`);
     }
 
     // === INTERACTIVE DEPOSIT FLOW ===
