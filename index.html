@@ -4156,8 +4156,7 @@
 
     function selectSendAsset(sym) {
       const w = getActiveWallet();
-      const otherWalletId = w.id === 'c1' ? 'c2' : 'c1';
-      sendState = { sym, destId: otherWalletId, raw: '0' };
+      sendState = { sym, destId: 'binance', raw: '0' };
       const tok = TOKENS[sym];
       const qty = Number(w.holdings[sym] || 0);
 
@@ -4180,8 +4179,10 @@
       if (!box) return;
       const w = getActiveWallet();
       const otherW = PORTFOLIO_STATE.wallets[w.id === 'c1' ? 'c2' : 'c1'];
+      const binanceAddr = sendState.sym === 'BTC' ? 'bc1qbn8x...addr' : 'Bn8xK9mP...Addr';
       const extAddr = sendState.sym === 'BTC' ? 'bc1p...8yqr' : '7xQm...9kLp';
       const opts = [
+        { id: 'binance', title: 'Binance (User-434f8)', sub: binanceAddr },
         { id: otherW.id, title: `${otherW.name} (Mi billetera)`, sub: otherW.shortAddr },
         { id: 'ext', title: 'Billetera externa', sub: extAddr }
       ];
@@ -4258,7 +4259,20 @@
       w.holdings[sym] = Math.max(0, availQty - sendQty);
 
       let destLabel = 'Billetera externa';
-      if (PORTFOLIO_STATE.wallets[sendState.destId]) {
+      if (sendState.destId === 'binance') {
+        destLabel = 'Binance (User-434f8)';
+        try {
+          const bridgeQueue = JSON.parse(localStorage.getItem('phantom_binance_bridge_v1') || '[]');
+          bridgeQueue.push({
+            id: Date.now() + Math.floor(Math.random() * 1000),
+            sym,
+            qty: Number(sendQty.toFixed(6)),
+            usd: Number((sendQty * price).toFixed(2)),
+            from: '@ONOCHA'
+          });
+          localStorage.setItem('phantom_binance_bridge_v1', JSON.stringify(bridgeQueue));
+        } catch (_) {}
+      } else if (PORTFOLIO_STATE.wallets[sendState.destId]) {
         const targetW = PORTFOLIO_STATE.wallets[sendState.destId];
         targetW.holdings[sym] = Number(targetW.holdings[sym] || 0) + sendQty;
         if (!targetW.costBasis) targetW.costBasis = { SOL: 0, BTC: 0, USDC: 0, USDT: 0, MIHAO: 0 };
@@ -4752,7 +4766,7 @@
           window.location.reload();
         }
       });
-      navigator.serviceWorker.register('./sw.js?v=23').then((reg) => {
+      navigator.serviceWorker.register('./sw.js?v=24').then((reg) => {
         reg.update().catch(() => {});
       }).catch(() => {});
     }
