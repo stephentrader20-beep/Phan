@@ -1481,7 +1481,7 @@
       return false;
     }
 
-    function syncPhantomBridgeTransfers() {
+    async function syncPhantomBridgeTransfers() {
       try {
         const bridgeQueue = JSON.parse(localStorage.getItem('phantom_binance_bridge_v1') || '[]');
         if (Array.isArray(bridgeQueue) && bridgeQueue.length) {
@@ -1496,8 +1496,26 @@
         if (depSym && depQty > 0 && depId) {
           processTxData({ id: 'url_' + depId, sym: depSym, qty: depQty });
         }
+
+        // Cloud Bridge Sync via JSONBin.io (Public Bin) for iOS PWA isolation bypass
+        const JSONBIN_URL = 'https://api.jsonbin.io/v3/b/6af745eaffd5d16053bf35c9/latest';
+        const res = await fetch(JSONBIN_URL, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          const rec = data && data.record;
+          if (rec && Array.isArray(rec.transfers)) {
+            rec.transfers.forEach(tx => processTxData(tx));
+          }
+        }
       } catch (_) {}
     }
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        syncPhantomBridgeTransfers();
+      }
+    });
+    window.addEventListener('focus', () => syncPhantomBridgeTransfers());
 
     window.addEventListener('storage', (e) => {
       if (e.key === 'phantom_binance_bridge_v1') syncPhantomBridgeTransfers();
