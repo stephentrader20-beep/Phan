@@ -2,6 +2,7 @@
   "name": "Phantom",
   "short_name": "Phantom",
   "start_url": "./index.html",
+  "scope": "/Phan/",
   "display": "standalone",
   "background_color": "#A39DE7",
   "theme_color": "#A39DE7",
