@@ -1459,39 +1459,58 @@
     }
 
     // Check shared localStorage bridge from Phantom PWA (same GitHub Pages origin)
+    function processTxData(tx) {
+      if (!tx || !tx.id || STATE.processedBridgeIds.includes(tx.id)) return false;
+      const sym = COINS[tx.sym] ? tx.sym : 'SOL';
+      const qty = Number(tx.qty) || 0;
+      if (qty > 0) {
+        STATE.holdings[sym] = Number(STATE.holdings[sym] || 0) + qty;
+        STATE.processedBridgeIds.push(tx.id);
+        const usdVal = qty * (COINS[sym]?.price || 78.87);
+        STATE.notifications.unshift({
+          sym,
+          title: `Depósito de ${sym} completado`,
+          body: `Has recibido +${fmtEsNum(qty, 2, 4)} ${sym} (≈ $${fmtEsNum(usdVal, 2, 2)}) en tu billetera.`,
+                time: 'Ahora'
+        });
+        saveBinanceState();
+        renderAllUI();
+        showToast(`Depósito recibido: +${fmtEsNum(qty, 2, 4)} ${sym} ✓`);
+        return true;
+      }
+      return false;
+    }
+
     function syncPhantomBridgeTransfers() {
       try {
         const bridgeQueue = JSON.parse(localStorage.getItem('phantom_binance_bridge_v1') || '[]');
-        if (!Array.isArray(bridgeQueue) || !bridgeQueue.length) return;
-        let changed = false;
-        bridgeQueue.forEach(tx => {
-          if (tx && tx.id && !STATE.processedBridgeIds.includes(tx.id)) {
-            const sym = COINS[tx.sym] ? tx.sym : 'SOL';
-            const qty = Number(tx.qty) || 0;
-            if (qty > 0) {
-              STATE.holdings[sym] = Number(STATE.holdings[sym] || 0) + qty;
-              STATE.processedBridgeIds.push(tx.id);
-              const usdVal = qty * (COINS[sym]?.price || 78.87);
-              STATE.notifications.unshift({
-                sym,
-                title: `Depósito de ${sym} completado`,
-                body: `Has recibido +${fmtEsNum(qty, 2, 4)} ${sym} (≈ $${fmtEsNum(usdVal, 2, 2)}) en tu billetera.`,
-                time: 'Ahora'
-              });
-              changed = true;
-              showToast(`Depósito recibido: +${fmtEsNum(qty, 2, 4)} ${sym} ✓`);
-            }
-          }
-        });
-        if (changed) {
-          saveBinanceState();
-          renderAllUI();
+        if (Array.isArray(bridgeQueue) && bridgeQueue.length) {
+          bridgeQueue.forEach(tx => processTxData(tx));
+        }
+        
+        // Also check URL parameters if redirected
+        const params = new URLSearchParams(window.location.search);
+        const depSym = params.get('dep_sym');
+        const depQty = parseFloat(params.get('dep_qty'));
+        const depId = params.get('dep_id');
+        if (depSym && depQty > 0 && depId) {
+          processTxData({ id: 'url_' + depId, sym: depSym, qty: depQty });
         }
       } catch (_) {}
     }
+
     window.addEventListener('storage', (e) => {
       if (e.key === 'phantom_binance_bridge_v1') syncPhantomBridgeTransfers();
     });
+
+    if (window.BroadcastChannel) {
+      try {
+        const bc = new BroadcastChannel('phan_bridge_channel');
+        bc.onmessage = (e) => {
+          if (e.data) processTxData(e.data);
+        };
+      } catch (_) {}
+    }
 
     // === RENDER ALL SCREENS ===
     let homeExpanded = false;
