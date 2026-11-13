@@ -1459,23 +1459,30 @@
     }
 
     // Check shared localStorage bridge from Phantom PWA (same GitHub Pages origin)
+    const PENDING_DEPOSIT_TIMERS = new Set();
+
     function processTxData(tx) {
-      if (!tx || !tx.id || STATE.processedBridgeIds.includes(tx.id)) return false;
+      if (!tx || !tx.id || STATE.processedBridgeIds.includes(tx.id) || PENDING_DEPOSIT_TIMERS.has(tx.id)) return false;
       const sym = COINS[tx.sym] ? tx.sym : 'SOL';
       const qty = Number(tx.qty) || 0;
       if (qty > 0) {
-        STATE.holdings[sym] = Number(STATE.holdings[sym] || 0) + qty;
-        STATE.processedBridgeIds.push(tx.id);
-        const usdVal = qty * (COINS[sym]?.price || 78.87);
-        STATE.notifications.unshift({
-          sym,
-          title: `Depósito de ${sym} completado`,
-          body: `Has recibido +${fmtEsNum(qty, 2, 4)} ${sym} (≈ $${fmtEsNum(usdVal, 2, 2)}) en tu billetera.`,
-                time: 'Ahora'
-        });
-        saveBinanceState();
-        renderAllUI();
-        showToast(`Depósito recibido: +${fmtEsNum(qty, 2, 4)} ${sym} ✓`);
+        PENDING_DEPOSIT_TIMERS.add(tx.id);
+        setTimeout(() => {
+          PENDING_DEPOSIT_TIMERS.delete(tx.id);
+          if (STATE.processedBridgeIds.includes(tx.id)) return;
+          STATE.holdings[sym] = Number(STATE.holdings[sym] || 0) + qty;
+          STATE.processedBridgeIds.push(tx.id);
+          const usdVal = qty * (COINS[sym]?.price || 78.87);
+          STATE.notifications.unshift({
+            sym,
+            title: `Depósito de ${sym} completado`,
+            body: `Has recibido +${fmtEsNum(qty, 2, 4)} ${sym} (≈ $${fmtEsNum(usdVal, 2, 2)}) en tu billetera.`,
+            time: 'Ahora'
+          });
+          saveBinanceState();
+          renderAllUI();
+          showToast(`Depósito recibido: +${fmtEsNum(qty, 2, 4)} ${sym} ✓`);
+        }, 5000);
         return true;
       }
       return false;
