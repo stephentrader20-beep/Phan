@@ -1,4 +1,4 @@
-const CACHE_NAME = 'binance-pwa-v7';
+const CACHE_NAME = 'binance-pwa-v8';
 const ASSETS = [
   './',
   './index.html',

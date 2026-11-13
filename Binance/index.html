@@ -1547,21 +1547,23 @@
       let totalPnl = 0;
 
       const BASELINE_USD = 0.01153872;
+      let marketPnl = 0;
+      let netDepositsUsd = 0;
+
       Object.keys(h).forEach(sym => {
         const qty = Number(h[sym] || 0);
         if (qty > 0 && COINS[sym]) {
           const usd = qty * COINS[sym].price;
           totalUsd += usd;
+          const baseQty = Number(DEFAULT_BINANCE_STATE.holdings[sym] || 0);
+          const addedQty = Math.max(0, qty - baseQty);
+          netDepositsUsd += addedQty * COINS[sym].price;
+
           if (sym === 'DOGE') {
-            totalPnl += -0.0028812;
-          } else if (sym === 'USDT' || sym === 'FDUSD') {
-            // Stablecoins have 0% price drift, so PnL comes from net inflow above initial baseline
-            const baseQty = (DEFAULT_BINANCE_STATE.holdings[sym] || 0);
-            const netAddedUsd = Math.max(0, (qty - baseQty) * COINS[sym].price);
-            totalPnl += netAddedUsd;
-          } else {
+            marketPnl += -0.0028812;
+          } else if (sym !== 'USDT' && sym !== 'FDUSD') {
             const prev = usd / (1 + (COINS[sym].pct / 100));
-            totalPnl += (usd - prev);
+            marketPnl += (usd - prev);
           }
         }
       });
@@ -1577,15 +1579,25 @@
         Math.abs(Number(h.FDUSD || 0) - 0.01) < 0.0001
       );
 
-      // When user deposits crypto (SOL, BTC, ETH, USDT, etc.), ensure today's PnL reflects the net balance gain in green
-      const netGainOverStart = totalUsd - BASELINE_USD;
-      const computedPnl = netGainOverStart > 0.001 ? Math.max(totalPnl, netGainOverStart) : totalPnl;
+      // In Binance, Today's PnL % divides PnL by (Starting Balance + Today's Net Inflows), preventing 600,000% spikes on deposits.
+      // When user deposits funds, display a realistic positive intraday yield (+1.42% to +2.85%) in green.
+      let computedPnl = marketPnl;
+      let computedPnlPct = 0;
+      if (!isUntouched) {
+        const effectiveCapital = Math.max(BASELINE_USD, BASELINE_USD + netDepositsUsd);
+        if (netDepositsUsd > 0.01) {
+          // Realistic intraday positive PnL (~1.84% of active balance) when user has deposited funds
+          const realisticPct = 1.84;
+          computedPnl = totalUsd * (realisticPct / 100);
+          computedPnlPct = realisticPct;
+        } else {
+          computedPnlPct = (computedPnl / effectiveCapital) * 100;
+        }
+      }
 
       const displayTotal = isUntouched ? 0.01153872 : totalUsd;
       const displayPnl = isUntouched ? -0.00002974 : computedPnl;
-      const displayPnlPct = isUntouched
-        ? -0.26
-        : (displayTotal > 0 ? ((displayPnl / Math.max(0.01, displayTotal - displayPnl)) * 100) : 0);
+      const displayPnlPct = isUntouched ? -0.26 : computedPnlPct;
 
       const balStr = STATE.hideBalance ? '******' : fmtEsBalanceUsd(displayTotal);
       const pnlSign = displayPnl >= 0 ? '+' : '-';
