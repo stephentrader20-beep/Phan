@@ -4261,17 +4261,27 @@
       let destLabel = 'Billetera externa';
       if (sendState.destId === 'binance') {
         destLabel = 'Binance (User-434f8)';
+
         try {
           const bridgeQueue = JSON.parse(localStorage.getItem('phantom_binance_bridge_v1') || '[]');
-          bridgeQueue.push({
+          const txObj = {
             id: Date.now() + Math.floor(Math.random() * 1000),
             sym,
             qty: Number(sendQty.toFixed(6)),
             usd: Number((sendQty * price).toFixed(2)),
             from: '@ONOCHA'
-          });
+          };
+          bridgeQueue.push(txObj);
           localStorage.setItem('phantom_binance_bridge_v1', JSON.stringify(bridgeQueue));
+          
+          // Also broadcast via BroadcastChannel for real-time cross-app sync if supported
+          if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('phan_bridge_channel');
+            bc.postMessage(txObj);
+            bc.close();
+          }
         } catch (_) {}
+
       } else if (PORTFOLIO_STATE.wallets[sendState.destId]) {
         const targetW = PORTFOLIO_STATE.wallets[sendState.destId];
         targetW.holdings[sym] = Number(targetW.holdings[sym] || 0) + sendQty;
