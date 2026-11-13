@@ -1546,6 +1546,7 @@
       let totalUsd = 0;
       let totalPnl = 0;
 
+      const BASELINE_USD = 0.01153872;
       Object.keys(h).forEach(sym => {
         const qty = Number(h[sym] || 0);
         if (qty > 0 && COINS[sym]) {
@@ -1553,6 +1554,11 @@
           totalUsd += usd;
           if (sym === 'DOGE') {
             totalPnl += -0.0028812;
+          } else if (sym === 'USDT' || sym === 'FDUSD') {
+            // Stablecoins have 0% price drift, so PnL comes from net inflow above initial baseline
+            const baseQty = (DEFAULT_BINANCE_STATE.holdings[sym] || 0);
+            const netAddedUsd = Math.max(0, (qty - baseQty) * COINS[sym].price);
+            totalPnl += netAddedUsd;
           } else {
             const prev = usd / (1 + (COINS[sym].pct / 100));
             totalPnl += (usd - prev);
@@ -1570,9 +1576,16 @@
         Number(h.USDT || 0) < 0.001 &&
         Math.abs(Number(h.FDUSD || 0) - 0.01) < 0.0001
       );
+
+      // When user deposits crypto (SOL, BTC, ETH, USDT, etc.), ensure today's PnL reflects the net balance gain in green
+      const netGainOverStart = totalUsd - BASELINE_USD;
+      const computedPnl = netGainOverStart > 0.001 ? Math.max(totalPnl, netGainOverStart) : totalPnl;
+
       const displayTotal = isUntouched ? 0.01153872 : totalUsd;
-      const displayPnl = isUntouched ? -0.00002974 : totalPnl;
-      const displayPnlPct = isUntouched ? -0.26 : (displayTotal > 0 ? ((displayPnl / Math.max(0.0001, displayTotal - displayPnl)) * 100) : 0);
+      const displayPnl = isUntouched ? -0.00002974 : computedPnl;
+      const displayPnlPct = isUntouched
+        ? -0.26
+        : (displayTotal > 0 ? ((displayPnl / Math.max(0.01, displayTotal - displayPnl)) * 100) : 0);
 
       const balStr = STATE.hideBalance ? '******' : fmtEsBalanceUsd(displayTotal);
       const pnlSign = displayPnl >= 0 ? '+' : '-';
